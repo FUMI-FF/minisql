@@ -19,6 +19,8 @@ type PrepareResult = int
 const (
 	PrepareSuccess PrepareResult = iota
 	PrepareUnrecognisedStatement
+	PrepareSyntaxError
+	PrepareFailure
 )
 
 type StatementType = int
@@ -28,8 +30,15 @@ const (
 	StatementSelect
 )
 
+type Row struct {
+	id       int
+	username string
+	email    string
+}
+
 type Statement struct {
-	_type StatementType
+	_type       StatementType
+	rowToInsert Row
 }
 
 func doMetaCommand(input string) MetaCommandResult {
@@ -43,6 +52,14 @@ func doMetaCommand(input string) MetaCommandResult {
 func prepareStatement(input string, stmt *Statement) PrepareResult {
 	if strings.HasPrefix(input, "insert") {
 		stmt._type = StatementInsert
+		n, err := fmt.Sscanf(input, "insert %d %s %s", &stmt.rowToInsert.id, &stmt.rowToInsert.username, &stmt.rowToInsert.email)
+		if err != nil {
+			fmt.Printf("`fmt.Sscanf` failed: %s\n", err)
+			return PrepareFailure
+		}
+		if n < 3 {
+			return PrepareSyntaxError
+		}
 		return PrepareSuccess
 	}
 	if strings.HasPrefix(input, "select") {
@@ -53,7 +70,7 @@ func prepareStatement(input string, stmt *Statement) PrepareResult {
 }
 
 func executeStatement(stmt *Statement) {
-	switch (stmt._type) {
+	switch stmt._type {
 	case StatementInsert:
 		fmt.Println("this is where we would do an insert")
 	case StatementSelect:
