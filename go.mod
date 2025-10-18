@@ -1,3 +1,3 @@
-module sqlite
+module minisql
 
 go 1.25.1
