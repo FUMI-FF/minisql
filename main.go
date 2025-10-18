@@ -3,25 +3,10 @@ package main
 import (
 	"bufio"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
-)
-
-type MetaCommandResult = int
-
-const (
-	MetaCommandSuccess MetaCommandResult = iota
-	MetaCommandUnrecogunisedCommand
-)
-
-type PrepareResult = int
-
-const (
-	PrepareSuccess PrepareResult = iota
-	PrepareUnrecognisedStatement
-	PrepareSyntaxError
-	PrepareFailure
 )
 
 type StatementType = int
@@ -136,37 +121,47 @@ func (t *Table) deserialize(rowIdx int) (*Row, error) {
 	return r, nil
 }
 
-func doMetaCommand(input string) MetaCommandResult {
+var (
+	ErrUnrecognizedMetaCmd = errors.New("unrecognized meta command")
+)
+
+func doMetaCommand(input string) error {
 	s := strings.TrimSpace(input)
 	if s == ".exit" {
 		os.Exit(0)
+		return nil
 	}
-	return MetaCommandUnrecogunisedCommand
+	return ErrUnrecognizedMetaCmd
 }
 
-func prepareStatement(input string, stmt *Statement) PrepareResult {
+var (
+	ErrPrepareStmtInvalidSyntax = errors.New("syntax error")
+	ErrPrepareStmtUnrecognizedStmt = errors.New("unrecognized statement")
+)
+
+func prepareStatement(input string) (*Statement, error) {
+	stmt := Statement{}
 	if strings.HasPrefix(input, "insert") {
 		stmt._type = StatementInsert
 		var id uint32
 		var username, email string
 		n, err := fmt.Sscanf(input, "insert %d %s %s", &id, &username, &email)
 		if err != nil {
-			fmt.Printf("`fmt.Sscanf` failed: %s\n", err)
-			return PrepareFailure
+			return nil, err
 		}
 		if n < 3 {
-			return PrepareSyntaxError
+			return nil, ErrPrepareStmtInvalidSyntax
 		}
 		stmt.rowToInsert.id = id
 		copy(stmt.rowToInsert.username[:], []byte(username))
 		copy(stmt.rowToInsert.email[:], []byte(email))
-		return PrepareSuccess
+		return &stmt, nil
 	}
 	if strings.HasPrefix(input, "select") {
 		stmt._type = StatementSelect
-		return PrepareSuccess
+		return &stmt, nil
 	}
-	return PrepareUnrecognisedStatement
+	return nil, ErrPrepareStmtUnrecognizedStmt
 }
 
 func executeStatement(stmt *Statement, table *Table) error {
@@ -222,24 +217,19 @@ func main() {
 		printPrompt()
 		input := readInput(reader)
 		if strings.HasPrefix(input, ".") {
-			switch doMetaCommand(input) {
-			case MetaCommandSuccess:
-				continue
-			case MetaCommandUnrecogunisedCommand:
-				fmt.Println("unrecognised command")
-				continue
+			if err := doMetaCommand(input); err != nil {
+				fmt.Printf("Failed to execute meta command: %s", err)
 			}
-		}
-
-		var stmt Statement
-		switch prepareStatement(input, &stmt) {
-		case PrepareSuccess:
-		case PrepareUnrecognisedStatement:
-			fmt.Println("unrecognised keyword")
 			continue
 		}
 
-		executeStatement(&stmt, &table)
+		stmt, err := prepareStatement(input)
+		if err != nil {
+			fmt.Printf("Failed to prepare statement: %s", err)
+			continue
+		}
+
+		executeStatement(stmt, &table)
 		fmt.Println("Executed")
 	}
 }
