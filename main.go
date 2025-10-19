@@ -178,6 +178,11 @@ func prepareStatement(input string) (*Statement, error) {
 	return nil, ErrPrepareStmtUnrecognizedStmt
 }
 
+var (
+	ErrExecuteStmtTableFull = errors.New("table is full")
+	ErrExecuteStmtInvalidStmtType = errors.New("invalid statement type")
+)
+
 func executeStatement(stmt *Statement, table *Table) error {
 	switch stmt._type {
 	case StatementInsert:
@@ -190,17 +195,17 @@ func executeStatement(stmt *Statement, table *Table) error {
 
 func executeInsert(stmt *Statement, table *Table) error {
 	if table.numRows >= TableMaxRows {
-		return fmt.Errorf("table is full")
+		return ErrExecuteStmtTableFull
 	}
 	if stmt._type != StatementInsert {
-		return fmt.Errorf("StatementType is not StatementInsert")
+		return ErrExecuteStmtInvalidStmtType
 	}
 	return table.Serialize(&stmt.rowToInsert)
 }
 
 func executeSelect(stmt *Statement, table *Table) error {
 	if stmt._type != StatementSelect {
-		return fmt.Errorf("StatementType is not StatementSelect")
+		return ErrExecuteStmtInvalidStmtType
 	}
 	for i := 0; i < int(table.numRows); i++ {
 		r, err := table.deserialize(i)
