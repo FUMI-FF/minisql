@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -76,17 +77,17 @@ const (
 )
 
 type Table struct {
-	numRows uint32 // 
-	pages [TableMaxPages][]byte
+	numRows uint32 //
+	pages   [TableMaxPages][]byte
 }
 
 func (t *Table) Serialize(r *Row) error {
-	if t.numRows >=  TableMaxRows {
+	if t.numRows >= TableMaxRows {
 		return fmt.Errorf("table full: %d rows (max %d)", t.numRows, TableMaxPages)
 	}
 
-	pageNum :=  t.numRows / RowsPerPage
-	
+	pageNum := t.numRows / RowsPerPage
+
 	if pageNum > TableMaxPages {
 		return fmt.Errorf("table index out of range: %d", pageNum)
 	}
@@ -97,8 +98,8 @@ func (t *Table) Serialize(r *Row) error {
 
 	rowOffset := t.numRows % RowsPerPage
 	byteOffset := rowOffset * RowSize
-	
-	serializeRow(t.pages[pageNum],int(byteOffset), r)
+
+	serializeRow(t.pages[pageNum], int(byteOffset), r)
 
 	t.numRows += 1
 
@@ -129,34 +130,47 @@ func doMetaCommand(input string) error {
 	s := strings.TrimSpace(input)
 	if s == ".exit" {
 		os.Exit(0)
-		return nil
 	}
 	return ErrUnrecognizedMetaCmd
 }
 
 var (
-	ErrPrepareStmtInvalidSyntax = errors.New("syntax error")
+	ErrPrepareStmtInvalidSyntax    = errors.New("syntax error")
 	ErrPrepareStmtUnrecognizedStmt = errors.New("unrecognized statement")
+	ErrPrepareStmtStringTooLong    = errors.New("string is too long")
+	ErrPrepareStmtNegativeID       = errors.New("ID must be positive")
 )
 
 func prepareStatement(input string) (*Statement, error) {
 	stmt := Statement{}
 	if strings.HasPrefix(input, "insert") {
 		stmt._type = StatementInsert
-		var id uint32
-		var username, email string
-		n, err := fmt.Sscanf(input, "insert %d %s %s", &id, &username, &email)
+
+		s := strings.Split(input, " ")
+		if len(s) != 4 {
+			return nil, ErrPrepareStmtInvalidSyntax
+		}
+		id, err := strconv.Atoi(s[1])
 		if err != nil {
 			return nil, err
 		}
-		if n < 3 {
-			return nil, ErrPrepareStmtInvalidSyntax
+		if id < 0 {
+			return nil, ErrPrepareStmtNegativeID
 		}
-		stmt.rowToInsert.id = id
-		copy(stmt.rowToInsert.username[:], []byte(username))
-		copy(stmt.rowToInsert.email[:], []byte(email))
+		username := []byte(s[2])
+		if len(username) > UsernameSize {
+			return nil, ErrPrepareStmtStringTooLong
+		}
+		email := []byte(s[3])
+		if len(email) > EmailSize {
+			return nil, ErrPrepareStmtStringTooLong
+		}
+		stmt.rowToInsert.id = uint32(id)
+		copy(stmt.rowToInsert.username[:], username)
+		copy(stmt.rowToInsert.email[:], email)
 		return &stmt, nil
 	}
+
 	if strings.HasPrefix(input, "select") {
 		stmt._type = StatementSelect
 		return &stmt, nil
@@ -188,7 +202,7 @@ func executeSelect(stmt *Statement, table *Table) error {
 	if stmt._type != StatementSelect {
 		return fmt.Errorf("StatementType is not StatementSelect")
 	}
-	for i:= 0; i < int(table.numRows); i++ {
+	for i := 0; i < int(table.numRows); i++ {
 		r, err := table.deserialize(i)
 		if err != nil {
 			return err
@@ -218,14 +232,14 @@ func main() {
 		input := readInput(reader)
 		if strings.HasPrefix(input, ".") {
 			if err := doMetaCommand(input); err != nil {
-				fmt.Printf("Failed to execute meta command: %s", err)
+				fmt.Printf("Failed to execute meta command: %s\n", err)
 			}
 			continue
 		}
 
 		stmt, err := prepareStatement(input)
 		if err != nil {
-			fmt.Printf("Failed to prepare statement: %s", err)
+			fmt.Printf("Failed to prepare statement: %s\n", err)
 			continue
 		}
 
