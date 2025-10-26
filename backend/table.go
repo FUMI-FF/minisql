@@ -1,6 +1,9 @@
 package backend
 
-import "fmt"
+import (
+	"encoding/binary"
+	"fmt"
+)
 
 type Table struct {
 	numRows uint32
@@ -29,7 +32,7 @@ func (t *Table) Serialize(r *Row) error {
 	rowOffset := t.numRows % RowsPerPage
 	byteOffset := rowOffset * RowSize
 	serializeRow(page, int(byteOffset), r)
-	
+
 	t.pager.pages[pageNum] = page
 
 	t.numRows += 1
@@ -54,4 +57,31 @@ func (t *Table) Deserialize(rowIdx int) (*Row, error) {
 	}
 	r, _ := deserializeRow(page, byteOffset)
 	return r, nil
+}
+
+func serializeRow(buf []byte, offset int, row *Row) int {
+	// ID
+	binary.LittleEndian.PutUint32(buf[offset:], row.ID)
+	offset += 4
+	// Username
+	copy(buf[offset:offset+UsernameSize], row.Username[:])
+	offset += UsernameSize
+	// Email
+	copy(buf[offset:offset+EmailSize], row.Email[:])
+	offset += EmailSize
+	return offset
+}
+
+func deserializeRow(data []byte, offset int) (*Row, int) {
+	var r Row
+	// ID
+	r.ID = binary.LittleEndian.Uint32(data[offset : offset+4])
+	offset += 4
+	// Username
+	copy(r.Username[:], data[offset:offset+UsernameSize])
+	offset += UsernameSize
+	// Email
+	copy(r.Email[:], data[offset:offset+EmailSize])
+	offset += EmailSize
+	return &r, offset
 }

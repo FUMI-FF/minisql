@@ -2,9 +2,9 @@ package backend
 
 import (
 	"errors"
+	"io"
 	"os"
 	"syscall"
-	"io"
 )
 
 type Pager struct {

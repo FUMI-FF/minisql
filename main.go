@@ -23,7 +23,6 @@ func doMetaCommand(input string, table *backend.Table) error {
 	return ErrUnrecognizedMetaCmd
 }
 
-
 func printPrompt() {
 	fmt.Print("db > ")
 }
