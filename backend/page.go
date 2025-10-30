@@ -7,6 +7,12 @@ import (
 	"syscall"
 )
 
+var (
+	ErrPagerPageOutOfBound   = errors.New("tried to fetch page number out of bound")
+	ErrPagerNullPageFlush    = errors.New("tried to flush null page")
+	ErrPagerInvalidSizeFlush = errors.New("tried to flush invalid size page")
+)
+
 type Pager struct {
 	file       *os.File
 	fileLength uint32
@@ -30,7 +36,7 @@ func newPage(filename string) (*Pager, error) {
 
 func (p *Pager) getPage(pageNum uint32) ([]byte, error) {
 	if pageNum > TableMaxPages {
-		return nil, errors.New("tried to fetch page number out of bound")
+		return nil, ErrPagerPageOutOfBound
 	}
 	if p.pages[pageNum] == nil {
 		// cache miss. allocate memory and load file
@@ -58,10 +64,10 @@ func (p *Pager) getPage(pageNum uint32) ([]byte, error) {
 
 func (p *Pager) flush(pageNum uint32, bytesToWrite uint32) error {
 	if p.pages[pageNum] == nil {
-		return errors.New("tried to flush null page")
+		return ErrPagerNullPageFlush
 	}
 	if bytesToWrite == 0 || bytesToWrite > PageSize {
-		return errors.New("invalid bytesToWrite")
+		return ErrPagerInvalidSizeFlush
 	}
 
 	offset := int64(pageNum) * int64(PageSize)
