@@ -14,10 +14,10 @@ func TestGetPage_WithPageCache(t *testing.T) {
 	require.NoError(t, err)
 	defer pager.file.Close()
 	pager.pages[0] = []byte("test")
-	
+
 	// act
 	b, err := pager.getPage(0)
-	
+
 	// assert
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("test"), b)
@@ -53,7 +53,7 @@ func TestFlush(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestFlush_NullPage(t *testing.T){
+func TestFlush_NullPage(t *testing.T) {
 	// arrange
 	pager, err := newPage("test.db")
 	require.NoError(t, err)
@@ -69,8 +69,8 @@ func TestFlush_NullPage(t *testing.T){
 
 func TestFlush_InvalidSize(t *testing.T) {
 	// arrange
-	tests := []uint32{0, PageSize}
-	
+	tests := []uint32{0, PageSize + 1}
+
 	pager, err := newPage("test.db")
 	require.NoError(t, err)
 	defer pager.file.Close()
