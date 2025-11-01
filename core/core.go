@@ -70,36 +70,36 @@ var (
 	ErrExecuteStmtInvalidStmtType = errors.New("invalid statement type")
 )
 
-func ExecuteStatement(stmt *Statement, table *backend.Table) error {
+func ExecuteStatement(stmt *Statement, db *backend.DB) error {
 	switch stmt._type {
 	case StatementInsert:
-		return executeInsert(stmt, table)
+		return executeInsert(stmt, db)
 	case StatementSelect:
-		return executeSelect(stmt, table)
+		return executeSelect(stmt, db)
 	}
 	return nil
 }
 
-func executeInsert(stmt *Statement, table *backend.Table) error {
-	if table.NumOfRows() >= backend.TableMaxRows {
-		return ErrExecuteStmtTableFull
-	}
+func executeInsert(stmt *Statement, db *backend.DB) error {
 	if stmt._type != StatementInsert {
 		return ErrExecuteStmtInvalidStmtType
 	}
-	return table.Serialize(&stmt.rowToInsert)
+	return db.Insert(&stmt.rowToInsert)
 }
 
-func executeSelect(stmt *Statement, table *backend.Table) error {
+func executeSelect(stmt *Statement, db *backend.DB) error {
 	if stmt._type != StatementSelect {
 		return ErrExecuteStmtInvalidStmtType
 	}
-	for i := 0; i < int(table.NumOfRows()); i++ {
-		r, err := table.Deserialize(i)
-		if err != nil {
-			return err
-		}
+
+	rows, err := db.SelectAll()
+	if err != nil {
+		return err
+	}
+
+	for _, r := range rows {
 		fmt.Printf("%s\n", r)
 	}
+
 	return nil
 }

@@ -72,13 +72,13 @@ func TestExecuteStatemet(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		table, err := backend.OpenDB("test.db")
+		db, err := backend.Open("test.db")
 		defer func() {
-			err = table.Close()
+			err = db.Close()
 			assert.NoError(t, err)
 		}()
 		assert.NoError(t, err)
-		err = ExecuteStatement(tt.stmt, table)
+		err = ExecuteStatement(tt.stmt, db)
 		assert.NoError(t, err)
 	}
 }

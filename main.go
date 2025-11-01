@@ -14,10 +14,10 @@ var (
 	ErrUnrecognizedMetaCmd = errors.New("unrecognized meta command")
 )
 
-func doMetaCommand(input string, table *backend.Table) error {
+func doMetaCommand(input string, db *backend.DB) error {
 	s := strings.TrimSpace(input)
 	if s == ".exit" {
-		table.Close()
+		db.Close()
 		os.Exit(0)
 	}
 	return ErrUnrecognizedMetaCmd
@@ -41,12 +41,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	table, err := backend.OpenDB(os.Args[1])
+	db, err := backend.Open(os.Args[1])
 	if err != nil {
 		fmt.Println("Failed to open database")
 		os.Exit(1)
 	}
-	defer table.Close()
+	defer db.Close()
 
 	reader := bufio.NewReader(os.Stdin)
 
@@ -54,7 +54,7 @@ func main() {
 		printPrompt()
 		input := readInput(reader)
 		if strings.HasPrefix(input, ".") {
-			if err := doMetaCommand(input, table); err != nil {
+			if err := doMetaCommand(input, db); err != nil {
 				fmt.Printf("Failed to execute meta command: %s\n", err)
 			}
 			continue
@@ -66,7 +66,7 @@ func main() {
 			continue
 		}
 
-		err = core.ExecuteStatement(stmt, table)
+		err = core.ExecuteStatement(stmt, db)
 		if err != nil {
 			fmt.Printf("`executeStatement` failed: %s\n", err)
 		}
