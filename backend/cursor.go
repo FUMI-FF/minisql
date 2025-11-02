@@ -27,9 +27,14 @@ func (c *Cursor) end() bool {
 }
 
 func (c *Cursor) value() (page []byte, offset uint32, err error) {
-	page, err = c.table.pager.getPage(c.rowNum)
+	if c.rowNum > c.table.numRows {
+		return nil, 0, errors.New("cursor beyond end")
+	}
+
+	pageNum := c.rowNum / RowsPerPage
+	page, err = c.table.pager.getPage(pageNum)
 	if err != nil {
-		return []byte{}, 0, err
+		return nil, 0, err
 	}
 	rowOffset := c.rowNum % RowsPerPage
 	byteOffset := rowOffset * RowSize

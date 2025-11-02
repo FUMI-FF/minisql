@@ -17,7 +17,10 @@ var (
 func doMetaCommand(input string, db *backend.DB) error {
 	s := strings.TrimSpace(input)
 	if s == ".exit" {
-		db.Close()
+		err := db.Close()
+		if err != nil {
+			fmt.Printf("`db.Close` failed: %s\n", err)
+		}
 		os.Exit(0)
 	}
 	return ErrUnrecognizedMetaCmd

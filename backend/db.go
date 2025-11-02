@@ -1,5 +1,7 @@
 package backend
 
+import "errors"
+
 type DB struct {
 	table *Table
 }
@@ -19,6 +21,9 @@ func (db *DB) Close() error {
 }
 
 func (db *DB) Insert(r *Row) error {
+	if db.table.numRows >= TableMaxRows {
+		return errors.New("table full")
+	}
 	cur := tableEnd(db.table)
 	return cur.write(r)
 }
