@@ -45,11 +45,11 @@ func PrepareStatement(input string) (*Statement, error) {
 			return nil, ErrPrepareStmtNegativeID
 		}
 		username := []byte(s[2])
-		if len(username) > backend.UsernameSize {
+		if len(username) > int(backend.UsernameSize) {
 			return nil, ErrPrepareStmtStringTooLong
 		}
 		email := []byte(s[3])
-		if len(email) > backend.EmailSize {
+		if len(email) > int(backend.EmailSize) {
 			return nil, ErrPrepareStmtStringTooLong
 		}
 		stmt.rowToInsert.ID = uint32(id)

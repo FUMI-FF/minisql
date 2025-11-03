@@ -49,10 +49,9 @@ func (p *Pager) getPage(pageNum uint32) ([]byte, error) {
 		}
 
 		if pageNum < numPages {
-			_, err := p.file.ReadAt(page, int64(pageNum)*PageSize)
-			if errors.Is(err, io.EOF) {
-				return page, nil
-			} else if err != nil {
+			_, err := p.file.ReadAt(page, int64(pageNum)*int64(PageSize))
+			// ignore io.EOF  
+			if !errors.Is(err, io.EOF) {
 				return nil, err
 			}
 		}

@@ -7,13 +7,13 @@ import (
 )
 
 const (
-	IDSize         = 4
-	UsernameSize   = 32
-	EmailSize      = 255
-	RowSize        = IDSize + UsernameSize + EmailSize
-	IDOffset       = 0
-	UsernameOffset = IDOffset + IDSize
-	EmalOffset     = UsernameOffset + UsernameSize
+	IDSize         uint32 = 4
+	UsernameSize   uint32 = 32
+	EmailSize      uint32 = 255
+	RowSize        uint32 = IDSize + UsernameSize + EmailSize
+	IDOffset       uint32 = 0
+	UsernameOffset uint32 = IDOffset + IDSize
+	EmalOffset     uint32 = UsernameOffset + UsernameSize
 )
 
 type Row struct {
@@ -27,10 +27,10 @@ func (r Row) String() string {
 }
 
 const (
-	PageSize      = 4096
-	TableMaxPages = 100
-	RowsPerPage   = PageSize / RowSize
-	TableMaxRows  = RowsPerPage * TableMaxPages
+	PageSize      uint32 = 4096
+	TableMaxPages uint32 = 100
+	RowsPerPage   uint32 = PageSize / RowSize
+	TableMaxRows  uint32 = RowsPerPage * TableMaxPages
 )
 
 type Table struct {
@@ -92,7 +92,7 @@ func serializeRow(buf []byte, offset uint32, row *Row) uint32 {
 	return offset
 }
 
-func deserializeRow(data []byte, offset int) (*Row, int) {
+func deserializeRow(data []byte, offset uint32) (*Row, uint32) {
 	var r Row
 	// ID
 	r.ID = binary.LittleEndian.Uint32(data[offset : offset+4])

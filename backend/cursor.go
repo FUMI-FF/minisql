@@ -53,7 +53,7 @@ func (c *Cursor) read() (*Row, error) {
 	if err != nil {
 		return nil, err
 	}
-	r, _ := deserializeRow(buf, int(offset))
+	r, _ := deserializeRow(buf, offset)
 	return r, nil
 }
 
