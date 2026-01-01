@@ -29,46 +29,27 @@ func (r Row) String() string {
 const (
 	PageSize      uint32 = 4096
 	TableMaxPages uint32 = 100
-	RowsPerPage   uint32 = PageSize / RowSize
-	TableMaxRows  uint32 = RowsPerPage * TableMaxPages
 )
 
 type Table struct {
-	numRows uint32
-	pager   *Pager
+	pager       *Pager
+	rootPageNum uint32
 }
 
 func newTable(pager *Pager) *Table {
-	numRows := pager.fileLength / RowSize
-	return &Table{numRows: numRows, pager: pager}
+	return &Table{pager: pager, rootPageNum: 0}
 }
 
 func (t *Table) Close() error {
-	numFullPages := t.numRows / RowsPerPage
-
-	for i := 0; i < int(numFullPages); i++ {
+	for i := 0; i < int(t.pager.numPages); i++ {
 		if t.pager.pages[i] == nil {
 			continue
 		}
-		err := t.pager.flush(uint32(i), PageSize)
+		err := t.pager.flush(uint32(i))
 		if err != nil {
 			return err
 		}
 		t.pager.pages[i] = nil
-	}
-
-	// flush partial(tail) page
-	numAdditionalRows := t.numRows % RowsPerPage
-	if numAdditionalRows > 0 {
-		pageNum := numFullPages
-		if t.pager.pages[pageNum] != nil {
-			bytes := numAdditionalRows * RowSize
-			err := t.pager.flush(pageNum, bytes)
-			if err != nil {
-				return err
-			}
-			t.pager.pages[pageNum] = nil
-		}
 	}
 
 	// ensure the content flushed to disk

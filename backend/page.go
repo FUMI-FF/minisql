@@ -16,6 +16,7 @@ var (
 type Pager struct {
 	file       *os.File
 	fileLength uint32
+	numPages   uint32
 	pages      [TableMaxPages][]byte
 }
 
@@ -28,9 +29,14 @@ func newPage(filename string) (*Pager, error) {
 	if err != nil {
 		return nil, err
 	}
+	if info.Size() % int64(PageSize) != 0 {
+		return nil, errors.New("Db file is not a whole number of pages. Corrupt file.")
+	}
+
 	return &Pager{
 		file:       file,
 		fileLength: uint32(info.Size()),
+		numPages:   uint32(info.Size()) / PageSize,
 	}, nil
 }
 
@@ -50,27 +56,28 @@ func (p *Pager) getPage(pageNum uint32) ([]byte, error) {
 
 		if pageNum < numPages {
 			_, err := p.file.ReadAt(page, int64(pageNum)*int64(PageSize))
-			// ignore io.EOF  
+			// ignore io.EOF
 			if !errors.Is(err, io.EOF) {
 				return nil, err
 			}
 		}
 
 		p.pages[pageNum] = page
+
+		if pageNum >= p.numPages {
+			p.numPages = pageNum + 1
+		}
 	}
 	return p.pages[pageNum], nil
 }
 
-func (p *Pager) flush(pageNum uint32, bytesToWrite uint32) error {
+func (p *Pager) flush(pageNum uint32) error {
 	if p.pages[pageNum] == nil {
 		return ErrPagerNullPageFlush
 	}
-	if bytesToWrite == 0 || bytesToWrite > PageSize {
-		return ErrPagerInvalidSizeFlush
-	}
 
 	offset := int64(pageNum) * int64(PageSize)
-	_, err := p.file.WriteAt(p.pages[pageNum][:bytesToWrite], offset)
+	_, err := p.file.WriteAt(p.pages[pageNum], offset)
 	if err != nil {
 		return err
 	}
